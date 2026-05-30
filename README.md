@@ -1,333 +1,460 @@
 ================================================================================
-AI Assignment 3 — Game-Playing Agents: Minimax, Alpha-Beta, Q-Learning, DQN
+GAME AI STRATEGY EVALUATION
 ================================================================================
 
-Games     : Tic-Tac-Toe (3×3) and Connect 4 (6×7, with 4×5 reduced board for Q-learning)
-Algorithms: Minimax, Alpha-Beta, Tabular Q-Learning, DQN (pure NumPy, no PyTorch)
-Schema    : All result CSVs use schema_version="v2"
+Comparative evaluation of classical search and reinforcement learning agents on
+Tic-Tac-Toe and Connect 4.
 
-All training and evaluation runs are HEADLESS (no GUI required).
-The GUI is only used for the optional demo (python3 main.py --ui --game ttt).
+Repository name suggestion: game-ai-strategy-evaluation
 
-================================================================================
-REQUIREMENTS
-================================================================================
+--------------------------------------------------------------------------------
+PROJECT SNAPSHOT
+--------------------------------------------------------------------------------
+
+Games       : Tic-Tac-Toe 3x3 and Connect 4 6x7
+Reduced C4  : 4x5 board used only for Tabular Q-Learning experiments
+Algorithms  : Minimax, Alpha-Beta Pruning, Tabular Q-Learning, Deep Q-Networks
+DQN Stack   : Pure NumPy implementation, no PyTorch required
+CSV Schema  : schema_version="v2" for all result files
+Execution   : Training and evaluation are headless; GUI is optional demo only
+
+Optional GUI demo:
+
+    python3 main.py --ui --game ttt
+    python3 main.py --ui --game c4
+
+--------------------------------------------------------------------------------
+INSTALLATION
+--------------------------------------------------------------------------------
+
+Install dependencies:
 
     pip install numpy matplotlib pandas seaborn
 
-No PyTorch is required. DQN is implemented in pure NumPy (rl/dqn.py).
+No PyTorch is required. The DQN implementation is written in pure NumPy and lives
+in:
 
-================================================================================
+    rl/dqn.py
+
+--------------------------------------------------------------------------------
+QUICK START
+--------------------------------------------------------------------------------
+
+Run the full experimental pipeline:
+
+    bash run_experiments.sh
+
+Run a faster smoke test:
+
+    bash run_experiments.sh --quick
+
+Expected runtime:
+
+    Full run   : about 3-4 hours, depending on machine performance
+    Quick run  : about 5-10 minutes
+
+--------------------------------------------------------------------------------
 PROJECT STRUCTURE
-================================================================================
+--------------------------------------------------------------------------------
 
     games/
-        tictactoe_core.py          Headless TTT game (clone/legal_moves/apply_move/...)
-        connect4_core.py           Headless Connect 4 game (configurable rows/cols)
-        tictactoe_ui.py            Tkinter GUI (demo only)
-        connect4_ui.py             Tkinter GUI (demo only)
+        tictactoe_core.py                 Headless Tic-Tac-Toe engine
+        connect4_core.py                  Headless Connect 4 engine
+        tictactoe_ui.py                   Tkinter GUI demo for Tic-Tac-Toe
+        connect4_ui.py                    Tkinter GUI demo for Connect 4
 
     agents/
-        base_agent.py              Abstract interface (reset / select_action / name)
-        random_agent.py            Random legal move
-        default_agent.py           Heuristic: win > block > smart fallback
-        ttt_minimax_agent.py       Full minimax for TTT (node counting, depth scoring)
-        ttt_alphabeta_agent.py     Alpha-beta pruning for TTT
-        c4_minimax_infeasible_agent.py    Full minimax C4 (INFEASIBILITY DEMO ONLY)
-        c4_alphabeta_infeasible_agent.py  Full alpha-beta C4 (INFEASIBILITY DEMO ONLY)
-        c4_depthlimited_alphabeta_agent.py  Depth-limited AB (depth 5, heuristic eval)
-        qlearning_ttt_agent.py     Loads trained Q-table for TTT inference
-        qlearning_c4_reduced_agent.py    Loads Q-table for REDUCED 4×5 C4 inference
-        dqn_ttt_agent.py           Loads DQN weights for TTT inference
-        dqn_c4_agent.py            Loads DQN weights for full 6×7 C4 inference
+        base_agent.py                     Shared agent interface
+        random_agent.py                   Random legal-move agent
+        default_agent.py                  Heuristic baseline agent
+        ttt_minimax_agent.py              Full Minimax for Tic-Tac-Toe
+        ttt_alphabeta_agent.py            Alpha-Beta for Tic-Tac-Toe
+        c4_minimax_infeasible_agent.py    Full Minimax C4 infeasibility demo
+        c4_alphabeta_infeasible_agent.py  Full Alpha-Beta C4 infeasibility demo
+        c4_depthlimited_alphabeta_agent.py Practical depth-limited C4 Alpha-Beta
+        qlearning_ttt_agent.py            Loads trained Tic-Tac-Toe Q-table
+        qlearning_c4_reduced_agent.py     Loads reduced-board Connect 4 Q-table
+        dqn_ttt_agent.py                  Loads Tic-Tac-Toe DQN weights
+        dqn_c4_agent.py                   Loads full-board Connect 4 DQN weights
 
     rl/
-        env.py                     Gym-like environments (TicTacToeEnv, Connect4Env)
-                                   Both support enable_role_alternation() so agents
-                                   train as both P1 and P2 in alternating episodes.
-        q_learning.py              Tabular Q-learning with epsilon-greedy + action masking
-        dqn.py                     Deep Q-Network (pure NumPy MLP, replay buffer, target net)
-        train_qlearning_ttt.py     Training script: Q-learning on TTT
-        train_qlearning_c4_reduced.py  Training script: Q-learning on reduced 4×5 C4
-        train_dqn_ttt.py           Training script: DQN on TTT
-        train_dqn_c4.py            Training script: DQN on full 6×7 C4
+        env.py                            Gym-like environments for both games
+        q_learning.py                     Tabular Q-Learning implementation
+        dqn.py                            Pure NumPy DQN implementation
+        train_qlearning_ttt.py            Train Q-Learning on Tic-Tac-Toe
+        train_qlearning_c4_reduced.py     Train Q-Learning on reduced 4x5 C4
+        train_dqn_ttt.py                  Train DQN on Tic-Tac-Toe
+        train_dqn_c4.py                   Train DQN on full 6x7 C4
 
     experiments/
-        run_match.py               Single matchup (any two agents, any game)
-        evaluate_against_default.py  All agents vs Default opponent
-        evaluate_crossplay.py      Round-robin cross-play matrix
-        run_tournament.py          Full tournament (vs-default + crossplay)
-        connect4_infeasibility.py  Infeasibility demonstration with time budget
-        aggregate_results.py       Multi-seed statistical aggregator (mean ± std, 95% CI)
-        plotter.py                 Generate all report graphs from saved CSVs
-        validate.py                Correctness validation (11 checks)
-        results/                   Saved CSV outputs (timestamped filenames)
-        graphs/                    Saved PNG charts
+        run_match.py                      Run one matchup between two agents
+        evaluate_against_default.py       Evaluate agents against baseline
+        evaluate_crossplay.py             Round-robin cross-play evaluation
+        run_tournament.py                 Full tournament runner
+        connect4_infeasibility.py         C4 search infeasibility experiment
+        aggregate_results.py              Multi-seed statistical aggregation
+        plotter.py                        Generate graphs from result CSVs
+        validate.py                       Correctness validation checks
+        results/                          Timestamped CSV outputs
+        graphs/                           Generated PNG charts
 
     utils/
-        seed.py         set_seed(seed) for random / numpy
-        metrics.py      MetricsCollector for win/draw/loss/time/nodes statistics
-        serialization.py  save_csv, save_json, get_timestamp
-        plotting.py     Basic matplotlib helpers
+        seed.py                           Reproducible random seeds
+        metrics.py                        Win/draw/loss/time/node metrics
+        serialization.py                  CSV, JSON, and timestamp helpers
+        plotting.py                       Matplotlib helper functions
 
-    models/           Saved model files (.pkl)
-    run_experiments.sh  One-command pipeline (bash run_experiments.sh [--quick])
-    CHANGELOG.md      Record of all fixes and additions
-    main.py           Entry point (GUI demo launcher)
+    models/                               Saved trained model files
+    run_experiments.sh                    One-command experiment pipeline
+    CHANGELOG.md                          Fixes and additions log
+    main.py                               GUI demo launcher
 
-================================================================================
-IMPORTANT DESIGN NOTES
-================================================================================
+--------------------------------------------------------------------------------
+CORE DESIGN NOTES
+--------------------------------------------------------------------------------
 
-DEFAULT OPPONENT
-  win > block > smart fallback (deterministic).
-  TTT fallback: center → corners → edges.
-  C4 fallback:  center column first, then adjacent columns outward.
+1. Default Opponent
 
-RL ROLE ALTERNATION
-  All RL training scripts call env.enable_role_alternation() before training.
-  On even episodes the agent plays as P1 (first mover); on odd episodes the
-  opponent takes the opening move and the agent plays as P2.
-  This prevents overspecialisation to one starting role and produces policies
-  that are robust to both roles.  Role-conditioned metrics (p1_win_rate,
-  p2_win_rate) are logged at every eval checkpoint.
+The default opponent is deterministic and follows this priority:
 
-RL OPPONENT TYPES
-  --opponent random (default): good for initial exploration coverage.
-  --opponent semi:  win > block > random; harder, improves generalisation.
-  For curriculum training, run the full pipeline twice:
-      python3 rl/train_qlearning_ttt.py --episodes 25000 --opponent random --seed 42
-      python3 rl/train_qlearning_ttt.py --episodes 25000 --opponent semi   --seed 42
+    win -> block -> smart fallback
 
-RL GENERALIZATION EVALUATION
-  At each eval checkpoint the agent is tested against BOTH a random and a
-  semi opponent. The CSV columns eval_win_rate_random and eval_win_rate_semi
-  show the generalization gap (how much performance drops on a harder opponent).
+For Tic-Tac-Toe, the fallback order is:
 
-CONNECT 4 INFEASIBILITY
-  c4_minimax_infeasible_agent.py and c4_alphabeta_infeasible_agent.py are
-  used ONLY for the infeasibility experiment — they time out on a 6×7 board.
-  For actual C4 play, C4DepthLimitedAlphaBetaAgent (depth 5) is used.
+    center -> corners -> edges
 
-TABULAR Q-LEARNING FOR CONNECT 4 — REDUCED BOARD
-  Full 6×7 board: 3^42 ≈ 3×10^20 states — intractable for a sparse Q-table.
-  Reduced 4×5 board: 3^20 ≈ 3.5×10^9 theoretical, ~10^5–10^6 visited in
-  practice — tractable. Rules are identical (4-in-a-row wins).
-  All CSV rows for this agent are labelled "board_config=4x5" and are plotted
-  separately. They must NOT be compared directly to 6×7 results.
+For Connect 4, the fallback order is:
 
-CSV SCHEMA (v2)
-  All evaluation CSVs include: schema_version, game, board_config, seed,
-  agent, opponent, win_rate, draw_rate, loss_rate, p1_win_rate, p2_win_rate,
-  first_mover_advantage, avg_agent_time_ms_per_move, avg_agent_nodes_per_move.
-  The plotter and aggregator reject files that lack schema_version="v2".
+    center column -> adjacent columns outward
 
-WINNER TRACKING
-  play_game() in run_match.py correctly maps board player (1 or 2) to agent
-  identity (agent1 or agent2) accounting for alternating starting player.
+2. RL Role Alternation
 
-EVALUATION FAIRNESS NOTES
-  • In Tic-Tac-Toe, 100% draws vs a competent default indicates optimal or
-    near-optimal play, NOT poor performance.
-  • High win rate vs Random ≠ strong performance vs Default or stronger agents.
-  • A policy with much higher p1_win_rate than p2_win_rate is NOT robust.
-  • Reduced-board C4 results are justified approximations; they are NOT
-    directly comparable to full-board 6×7 results.
+All RL training scripts call:
 
-================================================================================
-ONE-COMMAND PIPELINE
-================================================================================
+    env.enable_role_alternation()
 
-    bash run_experiments.sh           # full run  (~3–4 hours, 500/200 games)
-    bash run_experiments.sh --quick   # quick test (~5–10 min, 50/30 games)
+This makes the agent train as both Player 1 and Player 2:
 
-================================================================================
-EXPERIMENT COMMANDS (run from project root)
-================================================================================
+    Even episodes : agent plays first as P1
+    Odd episodes  : opponent opens, agent plays as P2
 
---- STEP 1: Train RL Agents ---
+This prevents the RL agents from overfitting to one starting role. Role-specific
+metrics such as p1_win_rate and p2_win_rate are logged at evaluation checkpoints.
 
-  # Tabular Q-learning — Tic-Tac-Toe (~50k episodes, role alternation enabled)
-  python3 rl/train_qlearning_ttt.py --episodes 50000 --seed 42
-  python3 rl/train_qlearning_ttt.py --episodes 50000 --opponent semi --seed 42
+3. RL Opponent Types
 
-  # Tabular Q-learning — Connect 4 reduced 4×5 (~100k episodes)
-  python3 rl/train_qlearning_c4_reduced.py --episodes 100000 --rows 4 --cols 5 --seed 42
+Supported training opponents:
 
-  # DQN — Tic-Tac-Toe (~20k episodes)
-  python3 rl/train_dqn_ttt.py --episodes 20000 --seed 42
+    --opponent random    Useful for early exploration
+    --opponent semi      win -> block -> random, harder and better for generalisation
 
-  # DQN — full 6×7 Connect 4 (~100k episodes)
-  python3 rl/train_dqn_c4.py --episodes 100000 --seed 42
+Example curriculum-style training:
 
-  Models saved to models/  |  Training metrics to experiments/results/
+    python3 rl/train_qlearning_ttt.py --episodes 25000 --opponent random --seed 42
+    python3 rl/train_qlearning_ttt.py --episodes 25000 --opponent semi   --seed 42
 
---- STEP 2: Connect 4 Infeasibility Demonstration ---
+4. RL Generalisation Evaluation
 
-  # Quick test (60 seconds per algorithm)
-  python3 experiments/connect4_infeasibility.py --time_budget 60 --seed 42
+At each evaluation checkpoint, RL agents are tested against both random and semi
+opponents. The result CSVs include:
 
-  # Full assignment run (30 minutes per algorithm)
-  python3 experiments/connect4_infeasibility.py --time_budget 1800 --seed 42
+    eval_win_rate_random
+    eval_win_rate_semi
 
---- STEP 3: Evaluate All Agents vs Default Opponent ---
+These columns show how much performance drops when the opponent becomes stronger.
 
-  python3 experiments/evaluate_against_default.py --game ttt --games 500 --seed 42
-  python3 experiments/evaluate_against_default.py --game c4  --games 200 --seed 42
+5. Connect 4 Infeasibility
 
---- STEP 4: Cross-Play Round-Robin ---
+Full Minimax and full Alpha-Beta are included for Connect 4 only as an
+infeasibility demonstration. On a full 6x7 board, they time out quickly because
+the search space is too large.
 
-  python3 experiments/evaluate_crossplay.py --game ttt --games 200 --seed 42
-  python3 experiments/evaluate_crossplay.py --game c4  --games 100 --seed 42
+Practical Connect 4 play uses:
 
---- STEP 5: Full Tournament in One Command ---
+    C4DepthLimitedAlphaBetaAgent, depth=5
 
-  python3 experiments/run_tournament.py --games 200 --seed 42
-  python3 experiments/run_tournament.py --game ttt --games 500 --seed 42
+6. Reduced-Board Q-Learning for Connect 4
 
---- STEP 6: Single Matchup (debug / spot-check) ---
+Full Connect 4 has approximately:
 
-  python3 experiments/run_match.py --game ttt --agent1 minimax   --agent2 default --games 50 --seed 42
-  python3 experiments/run_match.py --game ttt --agent1 alphabeta --agent2 random  --games 100 --seed 42
-  python3 experiments/run_match.py --game c4  --agent1 c4_alphabeta --agent2 default --games 50 --seed 42
+    3^42 ~= 3 x 10^20 states
 
-  Agent names --game ttt: random, default, minimax, alphabeta, qlearning_ttt, dqn_ttt
-  Agent names --game c4:  random, default, c4_alphabeta, qlearning_c4, dqn_c4
+This is not tractable for a sparse tabular Q-table.
 
---- STEP 7: Generate All Graphs ---
+The Tabular Q-Learning Connect 4 agent therefore uses a reduced 4x5 board:
 
-  python3 experiments/plotter.py
+    3^20 ~= 3.5 x 10^9 theoretical states
+    about 10^5 to 10^6 states visited in practice
 
-  Reads the latest schema-compatible v2 CSVs from experiments/results/.
-  Saves all PNGs to experiments/graphs/.
+The rules remain the same: 4-in-a-row wins.
 
---- STEP 8: Validate Correctness ---
+Important: reduced-board Q-Learning results are labelled board_config=4x5 and
+must not be directly compared with full 6x7 Connect 4 agents.
 
-  python3 experiments/validate.py
+--------------------------------------------------------------------------------
+CSV SCHEMA
+--------------------------------------------------------------------------------
 
-  Runs 11 checks including: default agent behaviour, Minimax vs AlphaBeta
-  agreement, legal-move compliance, model loading, role alternation, P1+P2
-  metric sums, board-size isolation, and plotter schema safety.
+All evaluation CSVs use schema_version="v2" and include:
 
---- STEP 9: Aggregate Multi-Seed Results ---
+    schema_version
+    game
+    board_config
+    seed
+    agent
+    opponent
+    win_rate
+    draw_rate
+    loss_rate
+    p1_win_rate
+    p2_win_rate
+    first_mover_advantage
+    avg_agent_time_ms_per_move
+    avg_agent_nodes_per_move
 
-  python3 experiments/aggregate_results.py
-  python3 experiments/aggregate_results.py --game ttt   # TTT only
+The plotter and aggregator reject files that do not use schema_version="v2".
 
-  Produces mean ± std and 95% CI across seeds for all compatible v2 CSVs.
+--------------------------------------------------------------------------------
+EXPERIMENT COMMANDS
+--------------------------------------------------------------------------------
 
---- OPTIONAL: GUI Demo ---
+Run all commands from the project root.
 
-  python3 main.py --ui --game ttt
-  python3 main.py --ui --game c4
+1. Train RL agents
 
-================================================================================
-MULTI-SEED ANALYSIS (recommended: 3–5 seeds)
-================================================================================
+    # Tabular Q-Learning on Tic-Tac-Toe
+    python3 rl/train_qlearning_ttt.py --episodes 50000 --seed 42
+    python3 rl/train_qlearning_ttt.py --episodes 50000 --opponent semi --seed 42
 
-  for SEED in 42 123 999; do
-    python3 experiments/evaluate_against_default.py --game ttt --games 500 --seed $SEED
-    python3 experiments/evaluate_against_default.py --game c4  --games 200 --seed $SEED
-    python3 experiments/evaluate_crossplay.py       --game ttt --games 200 --seed $SEED
-    python3 experiments/evaluate_crossplay.py       --game c4  --games 100 --seed $SEED
-  done
-  python3 experiments/aggregate_results.py
+    # Tabular Q-Learning on reduced 4x5 Connect 4
+    python3 rl/train_qlearning_c4_reduced.py --episodes 100000 --rows 4 --cols 5 --seed 42
 
-================================================================================
-OUTPUT FILES (timestamped — YYYYMMDD_HHMMSS in all filenames)
-================================================================================
+    # DQN on Tic-Tac-Toe
+    python3 rl/train_dqn_ttt.py --episodes 20000 --seed 42
 
-  experiments/results/
-    vs_default_ttt_<ts>.csv          Agents vs Default, TTT (3×3)
-    vs_default_c4_<ts>.csv           Agents vs Default, C4 (6×7 + 4×5 rows)
-    crossplay_ttt_<ts>.csv           Round-robin, TTT
-    crossplay_c4_<ts>.csv            Round-robin, C4 (6×7 agents only)
-    c4_infeasibility_<ts>.csv        Infeasibility metrics
-    rl_training_metrics_ttt_qlearning_<ts>.csv
-    rl_training_metrics_ttt_dqn_<ts>.csv
-    rl_training_metrics_c4_qlearning_<ts>.csv  (4×5 board)
-    rl_training_metrics_c4_dqn_<ts>.csv        (6×7 board)
-    aggregated_vs_default_<ts>.csv   Multi-seed mean ± std
-    aggregated_crossplay_<ts>.csv    Multi-seed mean ± std
+    # DQN on full 6x7 Connect 4
+    python3 rl/train_dqn_c4.py --episodes 100000 --seed 42
 
-  experiments/graphs/
-    ttt_vs_default_winrate.png           Win rate bar chart with 95% CI
-    ttt_vs_default_outcomes.png          Stacked outcome bars
-    ttt_vs_default_role_stratified.png   P1 vs P2 outcomes per agent
-    c4_vs_default_winrate.png            (6×7 agents only)
-    c4_vs_default_outcomes.png
-    c4_vs_default_role_stratified.png
-    c4_reduced_vs_default_winrate.png    4×5 Q-learning agent (separate chart)
-    c4_reduced_vs_default_outcomes.png
-    ttt_crossplay_heatmap.png            Win-rate + draw-rate dual heatmap
-    c4_crossplay_heatmap.png
-    ttt_fma.png                          First-mover advantage bar chart
-    c4_fma.png
-    overall_comparison_dashboard.png     4-metric grouped bar dashboard
-    speed_vs_quality.png                 Decision time vs win rate scatter
-    decision_time_comparison.png         Per-move decision time bar chart
-    ttt_qlearning_training_winrate.png   Training curves (overall + P1/P2 + semi)
-    ttt_dqn_training_winrate.png
-    ttt_dqn_loss.png
-    c4_qlearning_training_winrate.png
-    c4_dqn_training_winrate.png
-    c4_dqn_loss.png
-    c4_minimax_infeasibility_nodes.png
-    c4_minimax_infeasibility_depth.png
+Models are saved to:
 
-================================================================================
-EVALUATION FAIRNESS AND CURRICULUM TRAINING
-================================================================================
+    models/
 
-Role Fairness:
-In Connect 4, and significantly in Tic-Tac-Toe, playing first (Player 1) gives a 
-massive inherent advantage. To rigorously evaluate all agents (Minimax and RL alike), 
-they are uniformly tested in both roles (150 games as P1, 150 as P2 against the default opponent)
-to avoid the "first-mover advantage" artificially inflating win rates. This is fully validated in 
-`validate.py` by ensuring computations remain strictly honest to `p1_win_rate` and `p2_win_rate`.
+Training metrics are saved to:
 
-RL Training Curriculum:
-RL agents face a significant hurdle early on: state-space sparseness. 
-If they play a strong opponent initially, they lose instantly without collecting meaningful rewards. 
-Our RL curriculum starts training against a "random" opponent. At a designated point midway 
-through training, the environment seamlessly switches to a "semi-intelligent" opponent, 
-increasing the challenge sequentially. Evaluating generalization logged against both random and 
-semi opponents exposes vulnerabilities where standard agents might overfit strictly to random behavior.
+    experiments/results/
 
-Reduced-Board Connect 4 (Q-Learning):
-Full 6x7 Connect 4 contains ~3e20 states. A sparse tabular array cannot capture meaningful 
-knowledge here before catastrophic out-of-memory errors occur, effectively producing a random agent.
-Therefore, our Tabular Q-Learning C4 agent intentionally trains and tests on a strictly isolated 
-4x5 board solely to practically demonstrate Q-Learning mechanics. Graphically and analytically, 
-it is segregated from 6x7 deep/alpha-beta agents to avoid fallacious comparisons.
+2. Run Connect 4 infeasibility demo
 
-Overall Comparison:
-Agents are ultimately aggregated alongside 'Overall Comparison Dashboards'. These dashboards are descriptive
-portraits capturing performance tradeoffs (Speed, VS-Default WR, CrossPlay WR, FMA) against our baselines.
-They explicitly do not crown a solitary "General Winner", recognizing that Minimax vs Deep Q-Networks 
-encounter wildly heterogeneous system scale constraints.
+    # Quick test, 60 seconds per algorithm
+    python3 experiments/connect4_infeasibility.py --time_budget 60 --seed 42
 
-================================================================================
-ALGORITHM ROLES (assignment requirement mapping)
-================================================================================
+    # Full assignment run, 30 minutes per algorithm
+    python3 experiments/connect4_infeasibility.py --time_budget 1800 --seed 42
 
-  INFEASIBILITY DEMO (Connect 4):
-    c4_minimax_infeasible_agent.py    plain Minimax, no pruning, depth tracked
-    c4_alphabeta_infeasible_agent.py  Alpha-Beta, center-first ordering, depth tracked
-    Script: python3 experiments/connect4_infeasibility.py --time_budget 1800
+3. Evaluate all agents against the default opponent
 
-  PRACTICAL CONNECT 4 PLAY:
-    c4_depthlimited_alphabeta_agent.py  depth-limited AB (depth=5, heuristic eval)
-      Heuristic: center column bonus + window evaluation (4/3/2-in-row scoring)
+    python3 experiments/evaluate_against_default.py --game ttt --games 500 --seed 42
+    python3 experiments/evaluate_against_default.py --game c4  --games 200 --seed 42
 
-  REDUCED-BOARD Q-LEARNING (Connect 4):
-    qlearning_c4_reduced_agent.py  trained on 4×5 board (justification above)
-    Evaluated separately; NOT compared to 6×7 agents in the same chart.
+4. Run cross-play round robin
 
-  TIC-TAC-TOE:
-    ttt_minimax_agent.py    full Minimax, depth-sensitive scoring (win=10-depth)
-    ttt_alphabeta_agent.py  Alpha-Beta pruning, same scoring
-    qlearning_ttt_agent.py  Tabular Q-learning (full 3×3 state space)
-    dqn_ttt_agent.py        DQN (9→128→64→9)
+    python3 experiments/evaluate_crossplay.py --game ttt --games 200 --seed 42
+    python3 experiments/evaluate_crossplay.py --game c4  --games 100 --seed 42
 
-================================================================================
+5. Run tournament
+
+    python3 experiments/run_tournament.py --games 200 --seed 42
+    python3 experiments/run_tournament.py --game ttt --games 500 --seed 42
+
+6. Run single matchups for debugging
+
+    python3 experiments/run_match.py --game ttt --agent1 minimax   --agent2 default --games 50  --seed 42
+    python3 experiments/run_match.py --game ttt --agent1 alphabeta --agent2 random  --games 100 --seed 42
+    python3 experiments/run_match.py --game c4  --agent1 c4_alphabeta --agent2 default --games 50 --seed 42
+
+Supported agent names:
+
+    Tic-Tac-Toe : random, default, minimax, alphabeta, qlearning_ttt, dqn_ttt
+    Connect 4  : random, default, c4_alphabeta, qlearning_c4, dqn_c4
+
+7. Generate graphs
+
+    python3 experiments/plotter.py
+
+This reads the latest compatible v2 CSV files from:
+
+    experiments/results/
+
+And saves PNG graphs to:
+
+    experiments/graphs/
+
+8. Validate correctness
+
+    python3 experiments/validate.py
+
+The validation script runs 11 checks, including:
+
+    default agent behaviour
+    Minimax vs Alpha-Beta agreement
+    legal-move compliance
+    model loading
+    role alternation
+    P1/P2 metric consistency
+    board-size isolation
+    plotter schema safety
+
+9. Aggregate multi-seed results
+
+    python3 experiments/aggregate_results.py
+    python3 experiments/aggregate_results.py --game ttt
+
+This produces mean, standard deviation, and 95% confidence intervals across
+compatible v2 CSV files.
+
+--------------------------------------------------------------------------------
+MULTI-SEED ANALYSIS
+--------------------------------------------------------------------------------
+
+Recommended: run 3 to 5 seeds.
+
+    for SEED in 42 123 999; do
+      python3 experiments/evaluate_against_default.py --game ttt --games 500 --seed $SEED
+      python3 experiments/evaluate_against_default.py --game c4  --games 200 --seed $SEED
+      python3 experiments/evaluate_crossplay.py       --game ttt --games 200 --seed $SEED
+      python3 experiments/evaluate_crossplay.py       --game c4  --games 100 --seed $SEED
+    done
+
+    python3 experiments/aggregate_results.py
+
+--------------------------------------------------------------------------------
+OUTPUT FILES
+--------------------------------------------------------------------------------
+
+All result files are timestamped using this format:
+
+    YYYYMMDD_HHMMSS
+
+CSV outputs:
+
+    experiments/results/
+        vs_default_ttt_<ts>.csv
+        vs_default_c4_<ts>.csv
+        crossplay_ttt_<ts>.csv
+        crossplay_c4_<ts>.csv
+        c4_infeasibility_<ts>.csv
+        rl_training_metrics_ttt_qlearning_<ts>.csv
+        rl_training_metrics_ttt_dqn_<ts>.csv
+        rl_training_metrics_c4_qlearning_<ts>.csv
+        rl_training_metrics_c4_dqn_<ts>.csv
+        aggregated_vs_default_<ts>.csv
+        aggregated_crossplay_<ts>.csv
+
+Graph outputs:
+
+    experiments/graphs/
+        ttt_vs_default_winrate.png
+        ttt_vs_default_outcomes.png
+        ttt_vs_default_role_stratified.png
+        c4_vs_default_winrate.png
+        c4_vs_default_outcomes.png
+        c4_vs_default_role_stratified.png
+        c4_reduced_vs_default_winrate.png
+        c4_reduced_vs_default_outcomes.png
+        ttt_crossplay_heatmap.png
+        c4_crossplay_heatmap.png
+        ttt_fma.png
+        c4_fma.png
+        overall_comparison_dashboard.png
+        speed_vs_quality.png
+        decision_time_comparison.png
+        ttt_qlearning_training_winrate.png
+        ttt_dqn_training_winrate.png
+        ttt_dqn_loss.png
+        c4_qlearning_training_winrate.png
+        c4_dqn_training_winrate.png
+        c4_dqn_loss.png
+        c4_minimax_infeasibility_nodes.png
+        c4_minimax_infeasibility_depth.png
+
+--------------------------------------------------------------------------------
+EVALUATION FAIRNESS
+--------------------------------------------------------------------------------
+
+Role fairness:
+
+Playing first gives a major advantage in both Tic-Tac-Toe and Connect 4. To avoid
+inflated results, agents are evaluated as both Player 1 and Player 2. This makes
+p1_win_rate, p2_win_rate, and first_mover_advantage important evaluation metrics.
+
+Tic-Tac-Toe interpretation:
+
+A 100 percent draw rate against a competent default opponent usually indicates
+optimal or near-optimal play. It should not automatically be treated as poor
+performance.
+
+Random-opponent caution:
+
+A high win rate against a random opponent does not guarantee strong performance
+against the default opponent or against stronger agents.
+
+Reduced-board caution:
+
+The 4x5 Connect 4 Q-Learning results are useful for demonstrating the learning
+mechanics of tabular Q-Learning, but they are not directly comparable to full
+6x7 Connect 4 agents.
+
+--------------------------------------------------------------------------------
+ALGORITHM ROLE MAPPING
+--------------------------------------------------------------------------------
+
+Connect 4 infeasibility demo:
+
+    c4_minimax_infeasible_agent.py       Plain Minimax, no pruning
+    c4_alphabeta_infeasible_agent.py     Alpha-Beta with center-first ordering
+    experiments/connect4_infeasibility.py Time-budgeted infeasibility experiment
+
+Practical Connect 4 play:
+
+    c4_depthlimited_alphabeta_agent.py
+
+This uses depth-limited Alpha-Beta search with:
+
+    depth = 5
+    center-column bonus
+    window evaluation for 4-in-row, 3-in-row, and 2-in-row patterns
+
+Reduced-board Connect 4 Q-Learning:
+
+    qlearning_c4_reduced_agent.py
+
+This is trained and evaluated on the isolated 4x5 board.
+
+Tic-Tac-Toe agents:
+
+    ttt_minimax_agent.py                 Full Minimax with depth-sensitive scoring
+    ttt_alphabeta_agent.py               Alpha-Beta with the same scoring
+    qlearning_ttt_agent.py               Tabular Q-Learning over the full 3x3 state space
+    dqn_ttt_agent.py                     DQN with 9 -> 128 -> 64 -> 9 architecture
+
+--------------------------------------------------------------------------------
+NOTES ON WINNER TRACKING
+--------------------------------------------------------------------------------
+
+The play_game() function in experiments/run_match.py maps board player identity
+back to the correct agent identity. This is important because starting player
+can alternate, so board player 1 is not always the same algorithm across games.
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+
+This project compares how classical game-tree search and reinforcement learning
+approaches behave under different game sizes and computational constraints.
+
+Key takeaway:
+
+    Minimax and Alpha-Beta are strong and explainable on small games such as
+    Tic-Tac-Toe, but full-width search becomes infeasible for Connect 4.
+    Reinforcement learning methods scale differently, but require careful
+    training design, role alternation, opponent curriculum, and fair evaluation.
